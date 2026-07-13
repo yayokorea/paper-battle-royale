@@ -2,6 +2,8 @@ package dev.yayo.battleroyale;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.MultipleFacing;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.*;
@@ -32,7 +34,7 @@ final class LobbyManager {
         return world.getChunkAtAsync(0,0,true).thenCompose(chunk->{
             CompletableFuture<Void> result=new CompletableFuture<>();
             Bukkit.getScheduler().runTask(plugin,()->{
-                try { int y=loadOrFindY(world); if(!isExistingLobby(world,y)) build(world,y); activate(world,y); result.complete(null); }
+                try { int y=loadOrFindY(world); build(world,y); activate(world,y); result.complete(null); }
                 catch(Exception e){result.completeExceptionally(e);}
             }); return result;
         });
@@ -71,15 +73,33 @@ final class LobbyManager {
     }
     private boolean isExistingLobby(World world,int y){return validY(world,y)&&world.getBlockAt(0,y-2,0).getType()==Material.LODESTONE&&world.getBlockAt(0,y,0).getType()==Material.CHISELED_STONE_BRICKS;}
     private void build(World world,int y){
+        clearTips(world,y);
         for(int x=-radius;x<=radius;x++)for(int z=-radius;z<=radius;z++)if(LobbyGeometry.inside(x,z,radius)){
             material(world,x,y-2,z,Material.STONE_BRICKS); material(world,x,y-1,z,Material.SMOOTH_STONE);
             material(world,x,y,z,(Math.abs(x)<=1||Math.abs(z)<=1)?Material.CHISELED_STONE_BRICKS:Material.SPRUCE_PLANKS);
-            if(LobbyGeometry.boundary(x,z,radius)){material(world,x,y+1,z,Material.GLASS_PANE);material(world,x,y+2,z,Material.GLASS_PANE);}
+            if(LobbyGeometry.wall(x,z,radius)){material(world,x,y+1,z,Material.GLASS_PANE);material(world,x,y+2,z,Material.GLASS_PANE);}
+            else {clearPane(world,x,y+1,z);clearPane(world,x,y+2,z);}
         }
         material(world,0,y-2,0,Material.LODESTONE); material(world,0,y,0,Material.CHISELED_STONE_BRICKS);
         int p=radius-2; for(int[] pos:new int[][]{{p,0},{-p,0},{0,p},{0,-p}}){material(world,pos[0],y+1,pos[1],Material.SPRUCE_FENCE);material(world,pos[0],y+2,pos[1],Material.LANTERN);}
+        connectPanes(world,y+1);connectPanes(world,y+2);
     }
-    private void material(World w,int x,int y,int z,Material m){w.getBlockAt(x,y,z).setType(m,false);}
+    private void material(World w,int x,int y,int z,Material m){w.getBlockAt(x,y,z).setType(m,m==Material.GLASS_PANE);}
+    private void clearPane(World w,int x,int y,int z){Block block=w.getBlockAt(x,y,z);if(block.getType()==Material.GLASS_PANE)block.setType(Material.AIR,true);}
+    private void clearTips(World world,int y){
+        for(int[] pos:new int[][]{{radius,0},{-radius,0},{0,radius},{0,-radius}})
+            for(int dy=-2;dy<=2;dy++)world.getBlockAt(pos[0],y+dy,pos[1]).setType(Material.AIR,false);
+    }
+    private void connectPanes(World world,int y){
+        for(int x=-radius;x<=radius;x++)for(int z=-radius;z<=radius;z++){
+            Block block=world.getBlockAt(x,y,z);
+            if(block.getType()!=Material.GLASS_PANE||!(block.getBlockData() instanceof MultipleFacing pane))continue;
+            for(BlockFace face:new BlockFace[]{BlockFace.NORTH,BlockFace.EAST,BlockFace.SOUTH,BlockFace.WEST})
+                pane.setFace(face,connectsToPane(block.getRelative(face)));
+            block.setBlockData(pane,false);
+        }
+    }
+    private boolean connectsToPane(Block block){return block.getType()==Material.GLASS_PANE||block.getType()==Material.SPRUCE_FENCE;}
     private void activate(World world,int y){spawn=new Location(world,.5,y+1,.5,0,0);world.setSpawnLocation(0,y+1,0,0);ready=true;plugin.getLogger().info("하늘 로비 준비 완료: "+world.getName()+" 0,"+y+",0");}
     boolean ready(){return ready;}
     Location spawn(){if(!ready)throw new IllegalStateException("로비가 아직 준비되지 않았습니다.");return spawn.clone();}
