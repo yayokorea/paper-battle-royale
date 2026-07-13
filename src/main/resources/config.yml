@@ -1,0 +1,11 @@
+min-players: 2
+max-players: 12
+preparation-seconds: 900
+max-match-seconds: 3600
+teleport-radius: 1500
+minimum-player-distance: 350
+border-start-size: 3500.0
+border-end-size: 75.0
+border-shrink-delay-seconds: 900
+border-shrink-duration-seconds: 2400
+random-location-attempts: 80

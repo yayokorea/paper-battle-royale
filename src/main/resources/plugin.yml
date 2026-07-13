@@ -1,0 +1,15 @@
+name: WildBattleRoyale
+version: '${version}'
+main: dev.yayo.battleroyale.BattleRoyalePlugin
+api-version: '26.2'
+description: 60분 이내 바닐라 야생 개인전 배틀로얄
+authors: [yayo]
+commands:
+  br:
+    description: 배틀로얄 관리 명령어
+    usage: /br <join|leave|start|stop|status>
+permissions:
+  battleroyale.play:
+    default: true
+  battleroyale.admin:
+    default: op
