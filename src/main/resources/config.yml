@@ -11,6 +11,6 @@ border-shrink-duration-seconds: 2400
 random-location-attempts: 80
 lobby-world: world
 lobby-y: auto
-lobby-search-start-y: 200
+lobby-search-start-y: 100
 lobby-radius: 8
 lobby-search-step: 4
