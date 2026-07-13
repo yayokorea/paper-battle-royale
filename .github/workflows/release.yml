@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Prepare or publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Run Release Please
+        id: release
+        uses: googleapis/release-please-action@8b8fd2cc23b2e18957157a9d923d75aa0c6f6ad5 # v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout released tag
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ steps.release.outputs.tag_name }}
+
+      - name: Set up Java 25
+        if: steps.release.outputs.release_created == 'true'
+        uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: Set up Gradle
+        if: steps.release.outputs.release_created == 'true'
+        uses: gradle/actions/setup-gradle@90ddb51e90a5fd9ba75f40cf85156b7b41bf76a3 # v6
+
+      - name: Build release jar
+        if: steps.release.outputs.release_created == 'true'
+        run: ./gradlew --no-daemon clean build
+
+      - name: Create SHA-256 checksums
+        if: steps.release.outputs.release_created == 'true'
+        working-directory: build/libs
+        run: sha256sum WildBattleRoyale-*.jar > checksums.txt
+
+      - name: Upload assets to GitHub Release
+        if: steps.release.outputs.release_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag_name }}
+        run: gh release upload "$RELEASE_TAG" build/libs/WildBattleRoyale-*.jar build/libs/checksums.txt --clobber

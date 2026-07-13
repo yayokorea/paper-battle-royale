@@ -15,7 +15,6 @@ final class GameListener implements Listener {
         if(attacker!=null && game.isAlive(attacker.getUniqueId()) && !game.pvpEnabled())e.setCancelled(true);
     }
     @EventHandler public void onDeath(PlayerDeathEvent e){if(game.isAlive(e.getPlayer().getUniqueId()))game.eliminate(e.getPlayer(),"사망");}
-    @EventHandler public void onRespawn(PlayerRespawnEvent e){if(game.isParticipant(e.getPlayer().getUniqueId())&&!game.isAlive(e.getPlayer().getUniqueId()))e.getPlayer().setGameMode(org.bukkit.GameMode.SPECTATOR);}
     @EventHandler public void onQuit(PlayerQuitEvent e){game.handleQuit(e.getPlayer());}
     @EventHandler public void onJoin(PlayerJoinEvent e){game.handleJoin(e.getPlayer());}
 }
