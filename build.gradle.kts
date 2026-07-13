@@ -2,8 +2,7 @@ plugins {
     java
 }
 
-group = "dev.yayo"
-version = "1.0.0"
+version = providers.fileContents(layout.projectDirectory.file("version.txt")).asText.map(String::trim).get()
 
 repositories { mavenCentral(); maven("https://repo.papermc.io/repository/maven-public/") }
 

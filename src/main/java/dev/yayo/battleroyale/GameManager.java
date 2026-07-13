@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 public final class GameManager {
     private final BattleRoyalePlugin plugin;
     private final GameConfig config;
+    private final LobbyManager lobby;
     private final Set<UUID> joined = new LinkedHashSet<>(), alive = new LinkedHashSet<>(), eliminated = new HashSet<>();
     private final Map<UUID, PlayerSnapshot> snapshots = new HashMap<>();
     private final List<BukkitTask> tasks = new ArrayList<>();
@@ -24,7 +25,7 @@ public final class GameManager {
     private long startedAt;
     private int initialPlayers;
 
-    GameManager(BattleRoyalePlugin plugin, GameConfig config) { this.plugin = plugin; this.config = config; }
+    GameManager(BattleRoyalePlugin plugin, GameConfig config, LobbyManager lobby) { this.plugin = plugin; this.config = config; this.lobby=lobby; }
     public GamePhase phase() { return phase; }
     public int joinedCount() { return joined.size(); }
     public int aliveCount() { return alive.size(); }
@@ -34,6 +35,7 @@ public final class GameManager {
     public boolean isParticipant(UUID id) { return joined.contains(id); }
     public boolean isAlive(UUID id) { return alive.contains(id); }
     public boolean pvpEnabled() { return phase == GamePhase.ACTIVE; }
+    public String lobbyDescription() { return lobby.description(); }
 
     public Component join(Player p) {
         if (phase != GamePhase.IDLE) return error("이미 게임이 진행 중입니다.");
@@ -50,9 +52,10 @@ public final class GameManager {
     }
     public Component start(Player sender) {
         if (phase != GamePhase.IDLE) return error("이미 게임이 진행 중입니다.");
+        if (!lobby.ready()) return error("로비가 아직 준비되지 않았습니다.");
         joined.removeIf(id -> Bukkit.getPlayer(id) == null);
         if (joined.size() < config.minPlayers()) return error("최소 "+config.minPlayers()+"명이 필요합니다.");
-        world = sender.getWorld();
+        world = lobby.world();
         if (!joined.stream().map(Bukkit::getPlayer).allMatch(p -> p != null && p.getWorld().equals(world)))
             return error("모든 참가자는 시작한 관리자와 같은 월드에 있어야 합니다.");
         phase = GamePhase.PREPARING; startedAt = System.currentTimeMillis();
@@ -60,8 +63,8 @@ public final class GameManager {
         joined.forEach(id -> { Player p=Bukkit.getPlayer(id); snapshots.put(id, PlayerSnapshot.capture(p)); });
         alive.addAll(joined); initialPlayers=alive.size();
         try {
-            WorldBorder b=world.getWorldBorder(); b.setCenter(sender.getLocation()); b.setSize(config.borderStartSize());
-            preparePlayers(sender.getLocation()).whenComplete((v, ex) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            WorldBorder b=world.getWorldBorder(); b.setCenter(0,0); b.setSize(config.borderStartSize());
+            preparePlayers(new Location(world,0,0,0)).whenComplete((v, ex) -> Bukkit.getScheduler().runTask(plugin, () -> {
                 if (ex != null) { plugin.getLogger().severe("시작 텔레포트 실패: "+ex.getMessage()); stop("시작 중 오류가 발생했습니다."); }
                 else if (phase == GamePhase.PREPARING) beginTimers();
             }));
@@ -128,7 +131,7 @@ public final class GameManager {
         if (phase==GamePhase.IDLE || phase==GamePhase.ENDING) return;
         phase=GamePhase.ENDING; broadcast(Component.text(reason, NamedTextColor.GOLD)); tasks.forEach(BukkitTask::cancel); tasks.clear(); ui.stop();
         if (world!=null && borderSnapshot!=null) try { borderSnapshot.restore(world.getWorldBorder()); } catch(RuntimeException e){ plugin.getLogger().severe("월드보더 복구 실패: "+e.getMessage()); }
-        snapshots.forEach((id,s) -> { Player p=Bukkit.getPlayer(id); if(p!=null) try{s.restore(p);}catch(RuntimeException e){plugin.getLogger().warning(p.getName()+" 상태 복구 실패");} });
+        snapshots.forEach((id,s) -> { Player p=Bukkit.getPlayer(id); if(p!=null) try{s.restore(p);Bukkit.getScheduler().runTaskLater(plugin,()->lobby.prepareWaitingPlayer(p),1L);}catch(RuntimeException e){plugin.getLogger().warning(p.getName()+" 상태 복구 실패");} });
         joined.clear(); alive.clear(); eliminated.clear(); borderSnapshot=null; world=null; phase=GamePhase.IDLE;
     }
     public void shutdown() { stop("플러그인 비활성화로 게임을 종료합니다."); }

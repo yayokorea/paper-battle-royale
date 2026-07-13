@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "a647d1513dc4b6a4aecf252574a1710a0cc4f29f",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "WildBattleRoyale",
+      "include-component-in-tag": false,
+      "changelog-path": "CHANGELOG.md"
+    }
+  }
+}

@@ -20,7 +20,7 @@ final class BattleRoyaleCommand implements TabExecutor {
             case "leave" -> sender.hasPermission("battleroyale.play")?game.leave((Player)sender):GameManager.error("권한이 없습니다.");
             case "start" -> sender.hasPermission("battleroyale.admin") && sender instanceof Player p?game.start(p):GameManager.error("관리자 플레이어만 시작할 수 있습니다.");
             case "stop" -> { if(sender.hasPermission("battleroyale.admin")){game.stop("관리자가 게임을 강제 종료했습니다.");yield GameManager.ok("종료 요청을 처리했습니다.");} yield GameManager.error("권한이 없습니다."); }
-            case "status" -> Component.text("상태: "+game.phase()+", 참가: "+game.joinedCount()+", 생존: "+game.aliveCount()+", 남은 시간: "+game.remainingSeconds()+"초",NamedTextColor.AQUA);
+            case "status" -> Component.text("상태: "+game.phase()+", 참가: "+game.joinedCount()+", 생존: "+game.aliveCount()+", 남은 시간: "+game.remainingSeconds()+"초, 로비: "+game.lobbyDescription(),NamedTextColor.AQUA);
             default -> GameManager.error("알 수 없는 하위 명령어입니다.");};
         sender.sendMessage(result);return true;
     }
