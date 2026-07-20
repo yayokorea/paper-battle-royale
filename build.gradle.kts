@@ -7,8 +7,8 @@ version = providers.fileContents(layout.projectDirectory.file("version.txt")).as
 repositories { mavenCentral(); maven("https://repo.papermc.io/repository/maven-public/") }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.60-beta")
-    testImplementation(platform("org.junit:junit-bom:5.12.2"))
+    compileOnly("io.papermc.paper:paper-api:26.2-rc-2.build.9-alpha")
+    testImplementation(platform("org.junit:junit-bom:6.1.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
